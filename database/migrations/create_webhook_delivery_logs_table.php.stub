@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create(config('config-webhook.table.delivery_logs', 'webhook_delivery_logs'), function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid')->unique()->index();
+            $table->foreignId('webhook_id')
+                ->constrained(config('config-webhook.table.webhooks', 'webhooks'))
+                ->cascadeOnDelete();
+            $table->string('event_type')->index();
+            $table->json('payload');
+            $table->unsignedSmallInteger('response_status')->nullable();
+            $table->text('response_body')->nullable();
+            $table->unsignedInteger('response_time_ms')->nullable();
+            $table->unsignedSmallInteger('attempt')->default(1);
+            $table->string('status')->default('pending')->index()->comment('pending, success, failed, retrying');
+            $table->text('error_message')->nullable();
+            $table->timestamp('next_retry_at')->nullable()->index();
+            $table->timestamp('completed_at')->nullable();
+            $table->json('meta')->nullable();
+            $table->timestamps();
+
+            $table->index(['webhook_id', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists(config('config-webhook.table.delivery_logs', 'webhook_delivery_logs'));
+    }
+};
