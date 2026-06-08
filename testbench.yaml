@@ -1,0 +1,14 @@
+providers:
+    - CleaniqueCoders\ConfigWebhook\ConfigWebhookServiceProvider
+
+migrations:
+    - workbench/database/migrations
+
+workbench:
+    install: true
+    discovers:
+        web: true
+        commands: true
+    build:
+        - create-sqlite-db
+        - migrate

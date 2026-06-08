@@ -23,13 +23,22 @@ or map your domain events to webhook types.
 - 🧩 **Config- or runtime-driven event catalogue** — no hardcoded domain events
 - 🖥️ **Optional Livewire + Flux admin UI** — works headless without it
 - 🔐 **Secrets encrypted at rest**, configurable authorization gate, configurable user model
-- ✅ Laravel **12 & 13**, PHP 8.4
+- ✅ Laravel **12 & 13**, PHP 8.3+
+
+## Requirements
+
+- PHP **8.3+**
+- Laravel **12** or **13**
+- (Optional, for the admin UI) `livewire/livewire` **^3 || ^4** and `livewire/flux`
 
 ## Installation
 
 ```bash
 composer require cleaniquecoders/laravel-config-webhook
 ```
+
+The service provider and `ConfigWebhook` facade are auto-discovered — no manual
+registration needed.
 
 Publish and run the migrations:
 
@@ -183,6 +192,29 @@ php artisan config-webhook:prune --days=30
 ```bash
 composer test
 ```
+
+The suite includes a true **end-to-end test** (`tests/EndToEndTest.php`) that mirrors how a
+consuming app uses the package: a domain event is mapped with `ConfigWebhook::listen()`, a
+subscriber webhook is created, the event is fired, and the queued job runs on the **sync**
+queue to deliver a signed HTTP request — asserting both the outgoing request and the
+recorded delivery log.
+
+## Local development (try it in a real app)
+
+The package ships an [Orchestra Testbench **Workbench**](https://github.com/orchestral/testbench)
+setup (`testbench.yaml` + `workbench/`) so you can boot a real Laravel app around it:
+
+```bash
+composer install
+vendor/bin/testbench workbench:build   # creates the sqlite db + runs migrations
+vendor/bin/testbench serve             # http://127.0.0.1:8000
+```
+
+- `GET /webhooks` — the bundled Livewire admin UI (needs `livewire/flux` installed to render)
+- `GET /fire` — dispatches the sample `OrderShipped` domain event through the full pipeline
+
+`workbench/app/Providers/WorkbenchServiceProvider.php` shows exactly how a host app registers
+its event catalogue and maps a domain event to a webhook type.
 
 ## Changelog
 

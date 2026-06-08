@@ -89,6 +89,16 @@ This package was extracted from an app. Keep it app-agnostic:
   baselined.
 - **Formatting**: Laravel Pint (`composer format`).
 - **Commands**: `composer test`, `composer analyse`, `composer format`.
+- **End-to-end test**: `tests/EndToEndTest.php` runs the full pipeline on the **sync** queue
+  (`config(['queue.default' => 'sync'])`) — domain event → `listen()` listener → manager →
+  `SendWebhookEvent` → `Http::fake()` → delivery log. This is the canonical "does it actually
+  work for a consumer" test; keep it green.
+- **Workbench (Testbench)**: `testbench.yaml` + `workbench/` provide a runnable demo app
+  (`vendor/bin/testbench workbench:build` then `serve`). `WorkbenchServiceProvider` shows the
+  host-side wiring; `workbench/routes/web.php` exposes `/webhooks` (UI) and `/fire` (dispatch
+  the sample `OrderShipped` event). The workbench migration includes the package stubs so the
+  served app has tables. `testbench.yaml` is **committed** (removed from `.gitignore`) so the
+  workbench setup is shared; the generated `workbench/database/*.sqlite` is ignored.
 
 ## Gotchas
 
