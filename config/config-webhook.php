@@ -160,7 +160,10 @@ return [
     |--------------------------------------------------------------------------
     */
     'ui' => [
-        'layout' => 'components.layouts.app',
+        // Host layout the admin UI renders into. Leave null to use the package's
+        // bundled minimal fallback layout (config-webhook::layouts.app). Set this
+        // to your own app layout (e.g. 'components.layouts.app') in production.
+        'layout' => null,
         'per_page' => 15,
     ],
 

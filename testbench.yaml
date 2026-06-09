@@ -1,14 +1,27 @@
 providers:
     - CleaniqueCoders\ConfigWebhook\ConfigWebhookServiceProvider
+    - Workbench\App\Providers\WorkbenchServiceProvider
 
 migrations:
     - workbench/database/migrations
 
+seeders:
+    - Workbench\Database\Seeders\DatabaseSeeder
+
 workbench:
+    start: '/webhooks'
     install: true
     discovers:
         web: true
         commands: true
     build:
         - create-sqlite-db
-        - migrate
+        - 'migrate:fresh --seed'
+
+env:
+    - APP_NAME="Config Webhook Workbench"
+    - APP_KEY="base64:G4WHQPo/GEThf3Qz/7+LyRHkztEsppWCZ79lE9M7bEg="
+    - DB_CONNECTION=sqlite
+    - QUEUE_CONNECTION=database
+    - CACHE_STORE=database
+    - MAIL_MAILER=log

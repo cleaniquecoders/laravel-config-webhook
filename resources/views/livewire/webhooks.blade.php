@@ -21,7 +21,7 @@
 
         @if ($webhooks->isEmpty() && ! $search)
             <div class="rounded-lg border border-dashed border-zinc-200 p-12 text-center dark:border-zinc-700">
-                <flux:icon.webhook class="mx-auto h-12 w-12 text-zinc-400" />
+                <flux:icon.bolt class="mx-auto h-12 w-12 text-zinc-400" />
                 <flux:heading size="lg" class="mt-4">No webhooks configured</flux:heading>
                 <flux:text class="mt-2">Create a webhook to start receiving event notifications.</flux:text>
                 <flux:button variant="primary" wire:click="create" class="mt-6 cursor-pointer">Add Webhook</flux:button>
@@ -67,9 +67,9 @@
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right">
                                     <flux:dropdown>
-                                        <flux:button variant="ghost" size="sm" icon="ellipsis" class="cursor-pointer" />
+                                        <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" class="cursor-pointer" />
                                         <flux:menu>
-                                            <flux:menu.item icon="list" wire:click="viewLogs('{{ $webhook->uuid }}')">Logs</flux:menu.item>
+                                            <flux:menu.item icon="queue-list" wire:click="viewLogs('{{ $webhook->uuid }}')">Logs</flux:menu.item>
                                             <flux:menu.item icon="pencil" wire:click="edit('{{ $webhook->uuid }}')">Edit</flux:menu.item>
                                             <flux:menu.item icon="trash" variant="danger"
                                                 wire:click="delete('{{ $webhook->uuid }}')"

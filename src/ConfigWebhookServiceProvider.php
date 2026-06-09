@@ -47,7 +47,12 @@ class ConfigWebhookServiceProvider extends PackageServiceProvider
     protected function registerLivewireComponent(): void
     {
         if (class_exists(Livewire::class)) {
-            Livewire::component('config-webhook::webhooks', Webhooks::class);
+            // NOTE: the component name must not contain "::". Under Livewire 4 a
+            // "::" turns the name into a *namespace* lookup (Finder::resolveClassComponentClassName)
+            // which only resolves components registered via componentNamespace(), not
+            // single components registered here — so a "::" name throws
+            // ComponentNotFoundException at mount. A dotted name round-trips correctly.
+            Livewire::component('config-webhook.webhooks', Webhooks::class);
         }
     }
 

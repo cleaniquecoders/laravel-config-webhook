@@ -93,12 +93,37 @@ This package was extracted from an app. Keep it app-agnostic:
   (`config(['queue.default' => 'sync'])`) — domain event → `listen()` listener → manager →
   `SendWebhookEvent` → `Http::fake()` → delivery log. This is the canonical "does it actually
   work for a consumer" test; keep it green.
-- **Workbench (Testbench)**: `testbench.yaml` + `workbench/` provide a runnable demo app
-  (`vendor/bin/testbench workbench:build` then `serve`). `WorkbenchServiceProvider` shows the
-  host-side wiring; `workbench/routes/web.php` exposes `/webhooks` (UI) and `/fire` (dispatch
-  the sample `OrderShipped` event). The workbench migration includes the package stubs so the
-  served app has tables. `testbench.yaml` is **committed** (removed from `.gitignore`) so the
-  workbench setup is shared; the generated `workbench/database/*.sqlite` is ignored.
+- **Workbench (Testbench)**: `testbench.yaml` + `workbench/` provide a runnable demo app.
+  `WorkbenchServiceProvider` (registered in `testbench.yaml` `providers`, alongside the package
+  provider) shows the host-side wiring — event catalogue + `listen(OrderShipped → order.shipped)`.
+  `workbench/routes/web.php` exposes `/webhooks` (UI), `/fire` (dispatch `OrderShipped`),
+  `/receiver` (a local subscriber endpoint that verifies the HMAC signature against the demo
+  secret) and `/received` (what the receiver captured). `DatabaseSeeder` seeds one active
+  "Demo Receiver" webhook subscribed to `order.shipped` so the demo works out of the box.
+  `testbench.yaml` sets a fixed `APP_KEY` (the `secret` encrypted cast needs it, and it must
+  match between seed-time and serve-time), `QUEUE_CONNECTION=database`, `CACHE_STORE=database`.
+  `testbench.yaml` is **committed**; the generated `workbench/database/*.sqlite` is ignored.
+
+  **Run the end-to-end demo:**
+  ```
+  vendor/bin/testbench migrate:fresh --seed   # (or workbench:build) — seed the Demo Receiver
+  vendor/bin/testbench serve --port=8000       # terminal 1
+  vendor/bin/testbench queue:work --queue=webhooks --tries=1   # terminal 2 (delivery is async)
+  ```
+  Then GET `/fire` → the worker delivers to `/receiver` → check `/received` (`verified: true`)
+  and the delivery log (`status=success, http=200`) in the UI at `/webhooks`. A queue worker is
+  required because `QUEUE_CONNECTION=database`; the receiver must run out-of-band from `/fire`
+  (the built-in `serve` is effectively single-process, so a *sync* self-POST would deadlock).
+
+  > **Workbench seeder needs PSR-4 + namespace gotchas.** `composer.json` `autoload-dev` must map
+  > `Workbench\Database\Seeders\` and `Workbench\Database\Factories\` (not just `Workbench\App\`).
+  > Raw `vendor/bin/testbench migrate:fresh --seed` looks for `DatabaseSeeder` (default namespace)
+  > — seed the workbench class via `db:seed --class='Workbench\Database\Seeders\DatabaseSeeder'`
+  > or let `workbench:build` map it.
+
+  > **The CSRF middleware class is `Illuminate\Foundation\Http\Middleware\PreventRequestForgery`**
+  > (not `ValidateCsrfToken`/`VerifyCsrfToken`) in this Laravel version. An inbound webhook
+  > receiver in a `web` route must `->withoutMiddleware([PreventRequestForgery::class])` or it 419s.
 
 ## Gotchas
 
@@ -122,6 +147,29 @@ This package was extracted from an app. Keep it app-agnostic:
 
 > **Don't add a DB foreign key on `webhooks.user_id`.** The host's users table is unknown; keep
 > it a nullable indexed column (decoupling rule #2).
+
+> **Livewire 4: the component name must NOT contain `::`.** A `::` makes Livewire 4's `Finder`
+> treat the name as a *namespace* lookup (only resolves things registered via
+> `componentNamespace()`), so a single component registered with `Livewire::component('x::y', …)`
+> throws `ComponentNotFoundException` at mount. Register the bundled UI as
+> `Livewire::component('config-webhook.webhooks', Webhooks::class)` (dot, not `::`). The route
+> points at the class directly, so the name just has to round-trip via the Finder.
+
+> **`config-webhook.ui.layout` default is `null`, on purpose.** `render()` uses
+> `config(...) ?: 'config-webhook::layouts.app'`, so a non-null default would *prevent* the
+> bundled fallback layout from ever being used. A leftover `'components.layouts.app'` default
+> 500s on any host without that view. Keep the default `null`; hosts set their own layout.
+
+> **Bundled fallback layout must be self-contained.** `config-webhook::layouts.app` cannot
+> `@vite` the host's `resources/css/app.css` (those files don't exist in fallback context →
+> `ViteManifestNotFoundException`). It loads Tailwind via the Play CDN (demo/first-run only) plus
+> `@fluxAppearance`/`@fluxScripts`. This mirrors the sibling packages' workbench layouts, which
+> also fall back to the Tailwind CDN when no built CSS is present.
+
+> **Bundled Blade only uses free (Heroicon) Flux icons.** `webhook`, `ellipsis`, and `list` are
+> Lucide names (Flux Pro). The UI uses the Heroicon equivalents `bolt`, `ellipsis-horizontal`,
+> and `queue-list` so it renders on free `livewire/flux`. `livewire/flux` is a `require-dev`
+> dependency (for the workbench/UI render) and stays a `suggest` for consumers.
 
 ## Release Workflow
 
