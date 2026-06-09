@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-config-webhook` will be documented in this file.
 
+## 1.0.1 - 2026-06-09
+
+**Full Changelog**: https://github.com/cleaniquecoders/laravel-config-webhook/compare/1.0.0...1.0.1
+
 ## 1.0.0 - 2026-06-08
 
 First stable release.
@@ -29,6 +33,7 @@ Outgoing webhooks for Laravel — extracted and generalised from the g8stack web
 composer require cleaniquecoders/laravel-config-webhook
 php artisan vendor:publish --tag="laravel-config-webhook-migrations"
 php artisan migrate
+
 
 ```
 **Next step to enable `composer require` everywhere:** submit the repo to Packagist (one-time) at https://packagist.org/packages/submit — afterwards the GitHub auto-update webhook keeps it in sync.
