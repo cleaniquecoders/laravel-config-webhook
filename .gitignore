@@ -27,7 +27,6 @@ _ide_helper_models.php
 # Misc
 phpunit.xml
 phpstan.neon
-/docs
 /coverage
 
 # Workbench build artifacts (the testbench.yaml + workbench/ sources ARE committed)

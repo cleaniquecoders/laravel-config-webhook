@@ -1,8 +1,6 @@
 # Laravel Config Webhook
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/cleaniquecoders/laravel-config-webhook.svg?style=flat-square)](https://packagist.org/packages/cleaniquecoders/laravel-config-webhook)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/cleaniquecoders/laravel-config-webhook/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/cleaniquecoders/laravel-config-webhook/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/cleaniquecoders/laravel-config-webhook.svg?style=flat-square)](https://packagist.org/packages/cleaniquecoders/laravel-config-webhook)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/cleaniquecoders/laravel-config-webhook.svg?style=flat-square)](https://packagist.org/packages/cleaniquecoders/laravel-config-webhook) [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/cleaniquecoders/laravel-config-webhook/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/cleaniquecoders/laravel-config-webhook/actions?query=workflow%3Arun-tests+branch%3Amain) [![Total Downloads](https://img.shields.io/packagist/dt/cleaniquecoders/laravel-config-webhook.svg?style=flat-square)](https://packagist.org/packages/cleaniquecoders/laravel-config-webhook)
 
 Define, sign, dispatch and log **outgoing webhooks** in any Laravel app. Subscribers
 register a URL, a secret, and the event types they care about; when one of those events
@@ -13,6 +11,8 @@ exponential backoff**, and records every attempt in a delivery log. Ships with a
 The package is completely app-agnostic — it knows nothing about your domain. You register
 your own event catalogue (via config or at runtime) and either dispatch payloads manually
 or map your domain events to webhook types.
+
+![Laravel Config Webhook admin UI](assets/admin-ui.png)
 
 ## Features
 
@@ -159,7 +159,7 @@ Enable the bundled full-page route in `config/config-webhook.php`:
 Or drop the Livewire component anywhere in your own layout:
 
 ```blade
-<livewire:config-webhook::webhooks />
+<livewire:config-webhook.webhooks />
 ```
 
 Restrict access with a gate:
@@ -202,19 +202,39 @@ recorded delivery log.
 ## Local development (try it in a real app)
 
 The package ships an [Orchestra Testbench **Workbench**](https://github.com/orchestral/testbench)
-setup (`testbench.yaml` + `workbench/`) so you can boot a real Laravel app around it:
+setup (`testbench.yaml` + `workbench/`) — a real Laravel app, pre-seeded so it works
+end-to-end out of the box:
 
 ```bash
 composer install
-vendor/bin/testbench workbench:build   # creates the sqlite db + runs migrations
-vendor/bin/testbench serve             # http://127.0.0.1:8000
+vendor/bin/testbench migrate:fresh --seed              # tables + a seeded "Demo Receiver" webhook
+vendor/bin/testbench serve --port=8000                 # terminal 1 — http://127.0.0.1:8000
+vendor/bin/testbench queue:work --queue=webhooks --tries=1   # terminal 2 — delivery is async
 ```
 
+Then exercise the full pipeline:
+
 - `GET /webhooks` — the bundled Livewire admin UI (needs `livewire/flux` installed to render)
-- `GET /fire` — dispatches the sample `OrderShipped` domain event through the full pipeline
+- `GET /fire` — dispatches the sample `OrderShipped` domain event
+- `GET /received` — the in-app subscriber endpoint shows the **signed** payload it received
+  (`"verified": true`), and the delivery log in the UI shows `status=success, http=200`
 
 `workbench/app/Providers/WorkbenchServiceProvider.php` shows exactly how a host app registers
-its event catalogue and maps a domain event to a webhook type.
+its event catalogue and maps a domain event to a webhook type;
+`workbench/routes/web.php` includes a `/receiver` endpoint that verifies the HMAC signature.
+
+> The demo delivers on a `database` queue, so a `queue:work` worker must be running. In your
+> own app you can deliver synchronously by setting the queue connection to `sync`.
+
+## Documentation
+
+Full documentation lives in [`docs/`](docs/README.md):
+
+- [Architecture](docs/01-architecture/README.md) — how it works, components, delivery lifecycle
+- [Development](docs/02-development/README.md) — getting started, usage, testing, workbench
+- [Configuration](docs/03-configuration/01-reference.md) — every config key
+- [API Reference](docs/04-api/README.md) — manager, signatures, payload & headers
+- [Releasing](docs/05-releasing/README.md) — versioning and publishing
 
 ## Changelog
 
