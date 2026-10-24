@@ -2,6 +2,23 @@
 
 All notable changes to `laravel-config-webhook` will be documented in this file.
 
+## 1.1.0 - 2026-10-24
+
+### Security
+
+- Webhook URLs pointing at private, loopback, link-local (cloud metadata) or reserved addresses are refused at save and at send; redirects are not followed and DNS is pinned to the checked IP.
+- The request body is now exactly the signed JSON string (previously re-encoded, so signatures could fail to verify).
+
+### Added
+
+- `allow_private_hosts` config (`CONFIG_WEBHOOK_ALLOW_PRIVATE_HOSTS`, default `false`) for local development.
+
+### Behaviour change
+
+- Existing webhooks targeting internal addresses stop delivering (marked failed, no retry) unless private hosts are allowed.
+
+**Full Changelog**: https://github.com/cleaniquecoders/laravel-config-webhook/compare/1.0.1...1.1.0
+
 ## 1.0.1 - 2026-06-09
 
 **Full Changelog**: https://github.com/cleaniquecoders/laravel-config-webhook/compare/1.0.0...1.0.1
@@ -33,6 +50,7 @@ Outgoing webhooks for Laravel — extracted and generalised from the g8stack web
 composer require cleaniquecoders/laravel-config-webhook
 php artisan vendor:publish --tag="laravel-config-webhook-migrations"
 php artisan migrate
+
 
 
 ```
