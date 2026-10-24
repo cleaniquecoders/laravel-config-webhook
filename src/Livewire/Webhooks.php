@@ -3,8 +3,10 @@
 namespace CleaniqueCoders\ConfigWebhook\Livewire;
 
 use CleaniqueCoders\ConfigWebhook\ConfigWebhook;
+use CleaniqueCoders\ConfigWebhook\Exceptions\UnsafeWebhookUrl;
 use CleaniqueCoders\ConfigWebhook\Models\Webhook;
 use CleaniqueCoders\ConfigWebhook\Models\WebhookDeliveryLog;
+use CleaniqueCoders\ConfigWebhook\Support\WebhookUrlGuard;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -100,7 +102,13 @@ class Webhooks extends Component
     {
         $rules = [
             'name' => 'required|string|max:100',
-            'url' => 'required|url|max:500',
+            'url' => ['required', 'url', 'max:500', function (string $attribute, mixed $value, \Closure $fail): void {
+                try {
+                    WebhookUrlGuard::check((string) $value);
+                } catch (UnsafeWebhookUrl $e) {
+                    $fail($e->getMessage());
+                }
+            }],
             'events' => 'required|array|min:1',
             'events.*' => [Rule::in(app(ConfigWebhook::class)->eventTypes())],
             'maxRetries' => 'required|integer|min:0|max:10',

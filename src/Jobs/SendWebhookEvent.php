@@ -5,9 +5,11 @@ namespace CleaniqueCoders\ConfigWebhook\Jobs;
 use CleaniqueCoders\ConfigWebhook\Enums\DeliveryStatus;
 use CleaniqueCoders\ConfigWebhook\Events\WebhookDelivered;
 use CleaniqueCoders\ConfigWebhook\Events\WebhookFailed;
+use CleaniqueCoders\ConfigWebhook\Exceptions\UnsafeWebhookUrl;
 use CleaniqueCoders\ConfigWebhook\Models\Webhook;
 use CleaniqueCoders\ConfigWebhook\Models\WebhookDeliveryLog;
 use CleaniqueCoders\ConfigWebhook\Support\WebhookSignature;
+use CleaniqueCoders\ConfigWebhook\Support\WebhookUrlGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -48,6 +50,22 @@ class SendWebhookEvent implements ShouldQueue
     {
         $deliveryLog = $this->getOrCreateDeliveryLog();
 
+        try {
+            $resolved = WebhookUrlGuard::check($this->webhook->url);
+        } catch (UnsafeWebhookUrl $e) {
+            // Not a transient failure: retrying would only repeat the refusal.
+            $deliveryLog->update([
+                'status' => DeliveryStatus::FAILED,
+                'error_message' => $e->getMessage(),
+                'next_retry_at' => null,
+                'completed_at' => now(),
+            ]);
+
+            WebhookFailed::dispatch($deliveryLog->refresh(), $e->getMessage(), false);
+
+            return;
+        }
+
         $jsonPayload = (string) json_encode($this->payload);
         $signature = WebhookSignature::generate($jsonPayload, $this->webhook->secret);
 
@@ -65,9 +83,15 @@ class SendWebhookEvent implements ShouldQueue
         $startTime = microtime(true);
 
         try {
+            // Send exactly the bytes that were signed: post($url, $array) re-encodes the payload,
+            // and any difference in encoding makes every receiver's signature check fail.
+            // No redirects: a public URL must not bounce the request to an internal one.
             $response = Http::withHeaders($headers)
+                ->withOptions($this->pinnedResolution($resolved))
+                ->withoutRedirecting()
                 ->timeout($this->webhook->requestTimeout())
-                ->post($this->webhook->url, $this->payload);
+                ->withBody($jsonPayload, 'application/json')
+                ->post($this->webhook->url);
 
             $responseTimeMs = (int) ((microtime(true) - $startTime) * 1000);
 
@@ -92,6 +116,28 @@ class SendWebhookEvent implements ShouldQueue
 
             $this->handleFailure($deliveryLog, $e->getMessage(), null, null, $responseTimeMs);
         }
+    }
+
+    /**
+     * Pin the connection to the IPs that passed the guard, so DNS cannot answer differently
+     * between the check and the request (rebinding).
+     *
+     * @param  list<string>  $ips
+     * @return array<string, mixed>
+     */
+    protected function pinnedResolution(array $ips): array
+    {
+        $ipv4 = array_values(array_filter($ips, fn (string $ip) => filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)));
+        $parts = parse_url($this->webhook->url);
+        $host = (string) ($parts['host'] ?? '');
+
+        if ($ipv4 === [] || filter_var($host, FILTER_VALIDATE_IP) || ! defined('CURLOPT_RESOLVE')) {
+            return [];
+        }
+
+        $port = $parts['port'] ?? (strtolower((string) ($parts['scheme'] ?? '')) === 'http' ? 80 : 443);
+
+        return ['curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ipv4[0]}"]]];
     }
 
     protected function getOrCreateDeliveryLog(): WebhookDeliveryLog
