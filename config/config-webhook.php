@@ -105,6 +105,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Private Hosts
+    |--------------------------------------------------------------------------
+    | Webhook URLs are operator input and the response body is stored, so by
+    | default only public addresses are allowed: private, loopback, link-local
+    | (cloud metadata) and reserved ranges are refused at save and at send, and
+    | redirects are not followed. Enable only for local development.
+    */
+    'allow_private_hosts' => env('CONFIG_WEBHOOK_ALLOW_PRIVATE_HOSTS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Events
     |--------------------------------------------------------------------------
     |

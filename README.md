@@ -18,6 +18,7 @@ or map your domain events to webhook types.
 
 - 🔌 **Outgoing webhooks** — per-subscriber URL, secret, subscribed events, custom headers
 - 🔏 **HMAC-SHA256 signatures** — every request is signed; helpers to verify incoming ones too
+- 🛡️ **SSRF-safe delivery** — private, loopback, link-local (cloud metadata) and reserved addresses are refused at save and at send, redirects are not followed, and the connection is pinned to the checked IP. Set `CONFIG_WEBHOOK_ALLOW_PRIVATE_HOSTS=true` only for local development
 - 🔁 **Retries with exponential backoff** — configurable base/multiplier, full delivery log
 - 🧾 **Delivery logs** — status, HTTP code, response time, attempt, error, response body
 - 🧩 **Config- or runtime-driven event catalogue** — no hardcoded domain events
